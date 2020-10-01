@@ -50,10 +50,6 @@ const HallPage = () => import(/* webpackChunkName: "hall" */'@/components/hall/i
 const PatronsPage = () => import(/* webpackChunkName: "hall" */'@/components/hall/patrons');
 const HeroesPage = () => import(/* webpackChunkName: "hall" */'@/components/hall/heroes');
 
-// Admin Panel
-const AdminPanelPage = () => import(/* webpackChunkName: "admin-panel" */'@/components/admin-panel');
-const AdminPanelUserPage = () => import(/* webpackChunkName: "admin-panel-user" */'@/components/admin-panel/user-support');
-
 // Except for tasks that are always loaded all the other main level
 // All the main level
 // components are loaded in separate webpack chunks.
@@ -110,7 +106,7 @@ const router = new VueRouter({
   scrollBehavior () {
     return { x: 0, y: 0 };
   },
-  // meta defaults: requiresLogin true, requiresAdmin false
+  // requiresLogin is true by default, isStatic false
   routes: [
     {
       name: 'register', path: '/register', component: RegisterLoginReset, meta: { requiresLogin: false },
@@ -342,22 +338,6 @@ const router = new VueRouter({
         { name: 'contributors', path: 'contributors', component: HeroesPage },
       ],
     },
-
-    {
-      name: 'adminPanel',
-      path: '/admin-panel',
-      component: AdminPanelPage,
-      meta: { requiresAdmin: true },
-      children: [
-        {
-          name: 'adminPanelUser',
-          path: '/admin-panel/:userIdentifier', // User ID or Username
-          component: AdminPanelUserPage,
-          meta: { requiresAdmin: true },
-        },
-      ],
-    },
-
     // Only used to handle some redirects
     // See router.beforeEach
     { path: '/redirect/:redirect', name: 'redirect' },
@@ -367,10 +347,9 @@ const router = new VueRouter({
 
 const store = getStore();
 
-router.beforeEach(async (to, from, next) => {
-  const { isUserLoggedIn, isUserLoaded } = store.state;
+router.beforeEach((to, from, next) => {
+  const { isUserLoggedIn } = store.state;
   const routeRequiresLogin = to.meta.requiresLogin !== false;
-  const routeRequiresAdmin = to.meta.requiresAdmin;
 
   if (to.name === 'redirect') return handleRedirect(to, from, next);
 
@@ -401,13 +380,6 @@ router.beforeEach(async (to, from, next) => {
 
   if (isUserLoggedIn && (to.name === 'login' || to.name === 'register')) {
     return next({ name: 'tasks' });
-  }
-
-  if (routeRequiresAdmin) {
-    // Redirect non-admin users when trying to access an page.
-    if (!isUserLoaded) await store.dispatch('user:fetch');
-    const isAdmin = store.state.user.data.contributor && store.state.user.data.contributor.admin;
-    if (!isAdmin) return next({ name: 'tasks' });
   }
 
   // Redirect old guild urls

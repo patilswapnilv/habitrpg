@@ -3,8 +3,6 @@ import validator from 'validator';
 import { authWithHeaders } from '../../middlewares/auth';
 import { ensureAdmin } from '../../middlewares/ensureAccessRight';
 import { model as User } from '../../models/user';
-import { model as Group } from '../../models/group';
-import common from '../../../common';
 import {
   NotFound,
 } from '../../libs/errors';
@@ -146,12 +144,7 @@ api.getHeroes = {
 // Note, while the following routes are called getHero / updateHero
 // they can be used by admins to get/update any user
 
-const heroAdminFields = 'auth balance contributor flags items lastCron party preferences profile.name purchased secret';
-const heroAdminFieldsToFetch = heroAdminFields; // these variables will make more sense when...
-const heroAdminFieldsToShow = heroAdminFields; // ... apiTokenObscured is added
-
-const heroPartyAdminFields = 'balance challengeCount leader leaderOnly memberCount purchased quest';
-// must never include Party name, description, summary, leaderMessage
+const heroAdminFields = 'contributor balance profile.name purchased items auth flags.chatRevoked flags.chatShadowMuted secret';
 
 /**
  * @api {get} /api/v3/hall/heroes/:heroId Get any user ("hero") given the UUID or Username
@@ -160,7 +153,7 @@ const heroPartyAdminFields = 'balance challengeCount leader leaderOnly memberCou
  * @apiGroup Hall
  * @apiPermission Admin
  *
- * @apiDescription Returns various data about the user. User does not need to be a contributor.
+ * @apiDescription Returns the profile of the given user. User does not need to be a contributor.
  *
  * @apiSuccess {Object} data The user object
  *
@@ -190,7 +183,7 @@ api.getHero = {
 
     const hero = await User
       .findOne(query)
-      .select(heroAdminFieldsToFetch)
+      .select(heroAdminFields)
       .exec();
 
     if (!hero) throw new NotFound(res.t('userWithIDNotFound', { userId: heroId }));
@@ -216,8 +209,9 @@ const gemsPerTier = {
  * @apiGroup Hall
  * @apiPermission Admin
  *
- * @apiDescription Update various details in the user's User document,
- * including but not limited to privileges, gems, contributions, items.
+ * @apiDescription Update user's gem balance, contributions and contribution tier,
+ * or admin status. Grant items. Block / unblock user's account.
+ * Revoke / unrevoke chat privileges.
  *
  * @apiExample Example Body:
  * {
@@ -230,17 +224,12 @@ const gemsPerTier = {
  *    "purchased": {"ads": true},
  *    "contributor": {
  *      "admin": true,
- *      "newsPoster": false,
  *      "contributions": "Improving API documentation",
  *      "level": 5,
  *      "text": "Scribe, Blacksmith"
  *    },
- *    "secret": {
- *      "text": "child with permission to use site",
- *    },
  *    "itemPath": "items.pets.BearCub-Skeleton",
- *    "itemVal": 5,
- *    "changeApiToken": true,
+ *    "itemVal": 1
  * }
  *
  * @apiSuccess {Object} data The updated user object
@@ -321,62 +310,15 @@ api.updateHero = {
       }
     }
 
-    if (updateData.changeApiToken) hero.apiToken = common.uuid();
-
     const savedHero = await hero.save();
     const heroJSON = savedHero.toJSON();
     heroJSON.secret = savedHero.getSecretData();
     const responseHero = { _id: heroJSON._id }; // only respond with important fields
-    heroAdminFieldsToShow.split(' ').forEach(field => {
+    heroAdminFields.split(' ').forEach(field => {
       _.set(responseHero, field, _.get(heroJSON, field));
     });
 
     res.respond(200, responseHero);
-  },
-};
-
-/**
- * @api {get} /api/v3/hall/heroes/party/:groupId Get any Party given its ID
- * @apiParam (Path) {UUID} groupId party's group ID
- * @apiName GetHeroParty
- * @apiGroup Hall
- * @apiPermission Admin
- *
- * @apiDescription Returns some basic information about a given Party,
- # to assist admins with user support.
- *
- * @apiSuccess {Object} data The party object (contains computed fields
- * that are not in the Group model)
- *
- * @apiUse NoAuthHeaders
- * @apiUse NoAccount
- * @apiUse NoUser
- * @apiUse NotAdmin
- * @apiUse groupIdRequired
- * @apiUse GroupNotFound
- */
-api.getHeroParty = { // @TODO XXX add tests
-  method: 'GET',
-  url: '/hall/heroes/party/:groupId',
-  middlewares: [authWithHeaders(), ensureAdmin],
-  async handler (req, res) {
-    req.checkParams('groupId', apiError('groupIdRequired')).notEmpty().isUUID();
-
-    const validationErrors = req.validationErrors();
-    if (validationErrors) throw validationErrors;
-
-    const { groupId } = req.params;
-
-    const query = { _id: groupId };
-
-    const party = await Group
-      .findOne(query)
-      .select(heroPartyAdminFields)
-      .exec();
-
-    if (!party) throw new NotFound(apiError('groupWithIDNotFound', { groupId }));
-    const partyRes = party.toJSON({ minimize: true });
-    res.respond(200, partyRes);
   },
 };
 

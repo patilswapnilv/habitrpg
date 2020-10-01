@@ -14,7 +14,6 @@ export default {
   guildsOnlyPaginate: 'Only public guilds support pagination.',
   guildsPaginateBooleanString: 'req.query.paginate must be a boolean string.',
   groupIdRequired: 'req.params.groupId must contain a groupId.',
-  groupWithIDNotFound: 'Group with id "<%= groupId %>" not found.',
   groupRemainOrLeaveChallenges: 'req.query.keep must be either "remain-in-challenges" or "leave-challenges"',
   managerIdRequired: 'req.body.managerId must contain a User ID.',
   noSudoAccess: 'You don\'t have sudo access.',

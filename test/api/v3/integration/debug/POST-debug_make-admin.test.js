@@ -3,7 +3,7 @@ import {
   generateUser,
 } from '../../../../helpers/api-integration/v3';
 
-describe('POST /debug/make-admin', () => {
+describe('POST /debug/make-admin (pended for v3 prod testing)', () => {
   let user;
 
   before(async () => {
