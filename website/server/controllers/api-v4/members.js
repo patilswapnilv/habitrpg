@@ -48,7 +48,7 @@ api.deleteMember = {
     req.checkQuery('deleteAmplitude').optional().isIn(['true', 'false']);
     const validationErrors = req.validationErrors();
     if (validationErrors) throw validationErrors;
-    await worker.sendJob('deleteUser', {
+    await worker.sendJob('DeleteUsers', {
       identifier: req.params.memberId,
       data: {
         userId: req.params.memberId,

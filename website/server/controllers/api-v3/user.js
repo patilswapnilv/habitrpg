@@ -305,7 +305,7 @@ api.deleteUser = {
       ]);
     }
 
-    worker.sendJob('deleteUser', {
+    worker.sendJob('DeleteUsers', {
       identifier: user._id,
       data: {
         userId: user._id,
